@@ -21,7 +21,7 @@ from tvm.relay import fpcore
 
 net = mlp.get_net(100)
 
-foo = FPCorePass
+foo = fpcore.FPCorePass
 
 print(net)
 print(foo)
