@@ -1,41 +1,49 @@
-import random
 from tvm import relay
 from tvm.relay.expr_functor import ExprMutator
+from tvm.relay.ty import TensorType
+
+
+def infer_type(func):
+    mod = relay.Module.from_expr(func)
+    mod = relay.transform.InferType()(mod)
+    return mod["main"]
 
 
 class GenerateFPCore(ExprMutator):
-    def node_name(self, node):
-        # returns a unique name for each node
-        return str(random.randint(int(1e4), int(1e5)))
-
     def visit_function(self, function):
         return [
             'FPCore',
-            'fn-' + self.node_name(function),
-            [self.visit_param(param) for param in function.params],
+            'fn-' + str(hash(function)),
+            [self.visit_function_param(param) for param in function.params],
             self.visit(function.body),
+        ]
+
+    def visit_function_param(self, var):
+        type_ = var.checked_type
+        if type(type_) is not TensorType:
+            raise NotImplementedError('Not implemented')
+        return [
+            '!', ':tvm-type', type_.dtype,
+            self.visit_var(var),
+            *type_.shape,
         ]
 
     def visit_let(self, let):
         return [
             'let',
-            [self.visit_param(let.var), self.visit(let.value)],
+            [self.visit_var(let.var), self.visit(let.value)],
             self.visit(let.body),
         ]
 
     def visit_call(self, call):
+        # [arg.checked_type for arg in call.args]
         return [
-            self.visit_op(call.op),
+            self.visit_op(call.op) + '-' + ','.join(['x'.join(map(str, arg.checked_type.shape)) for arg in call.args]),
             *[self.visit(arg) for arg in call.args],
         ]
 
-    def visit_param(self, var):
-        # this is var name that is being DEFINED
-        return 'v-' + self.node_name(var)
-
     def visit_var(self, var):
-        # this is var name that is REFERENCED
-        return 'v-' + self.node_name(var)
+        return 'var-' + str(var.vid) + '-' + 'x'.join(map(str, var.checked_type.shape))
 
     def visit_type(self, type_):
         raise NotImplementedError(f'{type_} ({type(type_)}) is not supported')
@@ -58,8 +66,7 @@ class GenerateFPCore(ExprMutator):
         raise NotImplementedError(f'{gvar} ({type(gvar)}) is not supported')
 
     def visit_op(self, op):
-        # Convert this op to an FPCore op
-        return str(op)
+        return str(op.name)
 
     def visit_constant(self, constant):
         return str(constant)
