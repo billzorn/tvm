@@ -18,14 +18,21 @@ class GenerateFPCore(ExprMutator):
         return [
             'FPCore',
             'fn-' + self.node_name(function),
-            [self.visit_param(param) for param in function.params],
+            [self.visit_function_param(param) for param in function.params],
             self.visit(function.body),
+        ]
+
+    def visit_function_param(self, var):
+        return [
+            '!', ':tvm-type', var.type_annotation.dtype,
+            self.visit_var(var),
+            *var.type_annotation.shape
         ]
 
     def visit_let(self, let):
         return [
             'let',
-            [self.visit_param(let.var), self.visit(let.value)],
+            [self.visit_var(let.var), self.visit(let.value)],
             self.visit(let.body),
         ]
 
@@ -35,13 +42,9 @@ class GenerateFPCore(ExprMutator):
             *[self.visit(arg) for arg in call.args],
         ]
 
-    def visit_param(self, var):
-        # this is var name that is being DEFINED
-        return 'v-' + self.node_name(var)
-
     def visit_var(self, var):
         # this is var name that is REFERENCED
-        return 'v-' + self.node_name(var)
+        return 'v-' + str(var.vid)
 
     def visit_type(self, type_):
         raise NotImplementedError(f'{type_} ({type(type_)}) is not supported')
@@ -65,6 +68,7 @@ class GenerateFPCore(ExprMutator):
 
     def visit_op(self, op):
         # Convert this op to an FPCore op
+        # based on op.name
         return str(op)
 
     def visit_constant(self, constant):
