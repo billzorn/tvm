@@ -18,10 +18,8 @@ import tvm
 from tvm import relay
 from tvm.relay.testing import mlp
 from tvm.relay import fpcore
+from tvm.relay import transform
 
-net = mlp.get_net(100)
+func = mlp.get_net(100)
+print(fpcore.GenerateFPCore().visit(func))
 
-foo = fpcore.FPCorePass
-
-print(net)
-print(foo)
