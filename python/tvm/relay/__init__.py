@@ -61,6 +61,8 @@ from . import qnn
 
 from .scope_builder import ScopeBuilder
 
+from . import fpcore
+
 # Required to traverse large programs
 setrecursionlimit(10000)
 
