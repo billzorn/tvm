@@ -38,12 +38,12 @@ class GenerateFPCore(ExprMutator):
     def visit_call(self, call):
         # [arg.checked_type for arg in call.args]
         return [
-            self.visit_op(call.op),
+            self.visit_op(call.op) + '-' + ','.join(['x'.join(map(str, arg.checked_type.shape)) for arg in call.args]),
             *[self.visit(arg) for arg in call.args],
         ]
 
     def visit_var(self, var):
-        return 'var-' + str(var.vid)
+        return 'var-' + str(var.vid) + '-' + 'x'.join(map(str, var.checked_type.shape))
 
     def visit_type(self, type_):
         raise NotImplementedError(f'{type_} ({type(type_)}) is not supported')

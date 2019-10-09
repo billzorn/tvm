@@ -22,4 +22,5 @@ from tvm.relay import transform
 
 func = mlp.get_net(100)
 func = fpcore.infer_type(func)
+
 print(fpcore.GenerateFPCore().visit(func))
