@@ -3,6 +3,12 @@ from tvm import relay
 from tvm.relay.expr_functor import ExprMutator
 
 
+def infer_type(func):
+    mod = relay.Module.from_expr(func)
+    mod = relay.transform.InferType()(mod)
+    return mod["main"]
+
+
 class GenerateFPCore(ExprMutator):
     def node_name(self, node):
         # returns a unique name for each node
