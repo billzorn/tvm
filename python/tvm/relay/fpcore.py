@@ -3,6 +3,10 @@ from tvm.relay.expr_functor import ExprMutator
 from tvm.relay.ty import TensorType
 
 
+def shape2str(shape):
+    ','.join(['x'.join(map(str, shape)) for arg in call.args])
+
+
 def infer_type(func):
     mod = relay.Module.from_expr(func)
     mod = relay.transform.InferType()(mod)
@@ -38,12 +42,12 @@ class GenerateFPCore(ExprMutator):
     def visit_call(self, call):
         # [arg.checked_type for arg in call.args]
         return [
-            self.visit_op(call.op) + '-' + ','.join(['x'.join(map(str, arg.checked_type.shape)) for arg in call.args]),
+            self.visit_op(call.op) + '-' + ','.join(map(shape2str, call.args)),
             *[self.visit(arg) for arg in call.args],
         ]
 
     def visit_var(self, var):
-        return 'var-' + str(var.vid) + '-' + 'x'.join(map(str, var.checked_type.shape))
+        return 'var-' + str(var.vid) + '-' + shape2str(var.checked_type.shape)
 
     def visit_type(self, type_):
         raise NotImplementedError(f'{type_} ({type(type_)}) is not supported')
