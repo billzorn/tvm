@@ -1,6 +1,6 @@
-import random
 from tvm import relay
 from tvm.relay.expr_functor import ExprMutator
+from tvm.relay.ty import TensorType
 
 
 def infer_type(func):
@@ -10,23 +10,22 @@ def infer_type(func):
 
 
 class GenerateFPCore(ExprMutator):
-    def node_name(self, node):
-        # returns a unique name for each node
-        return str(random.randint(int(1e4), int(1e5)))
-
     def visit_function(self, function):
         return [
             'FPCore',
-            'fn-' + self.node_name(function),
+            'fn-' + str(hash(function)),
             [self.visit_function_param(param) for param in function.params],
             self.visit(function.body),
         ]
 
     def visit_function_param(self, var):
+        type_ = var.checked_type
+        if type(type_) is not TensorType:
+            raise NotImplementedError('Not implemented')
         return [
-            '!', ':tvm-type', var.type_annotation.dtype,
+            '!', ':tvm-type', type_.dtype,
             self.visit_var(var),
-            *var.type_annotation.shape
+            *type_.shape,
         ]
 
     def visit_let(self, let):
@@ -37,14 +36,14 @@ class GenerateFPCore(ExprMutator):
         ]
 
     def visit_call(self, call):
+        # [arg.checked_type for arg in call.args]
         return [
             self.visit_op(call.op),
             *[self.visit(arg) for arg in call.args],
         ]
 
     def visit_var(self, var):
-        # this is var name that is REFERENCED
-        return 'v-' + str(var.vid)
+        return 'var-' + str(var.vid)
 
     def visit_type(self, type_):
         raise NotImplementedError(f'{type_} ({type(type_)}) is not supported')
@@ -67,9 +66,7 @@ class GenerateFPCore(ExprMutator):
         raise NotImplementedError(f'{gvar} ({type(gvar)}) is not supported')
 
     def visit_op(self, op):
-        # Convert this op to an FPCore op
-        # based on op.name
-        return str(op)
+        return str(op.name)
 
     def visit_constant(self, constant):
         return str(constant)
